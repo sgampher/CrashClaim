@@ -19,8 +19,6 @@ public class Wrapper1_19_4 extends Wrapper1_19_3 {
                 throw new IllegalArgumentException(e);
             }
         }
-
         return ENTITY_ID.incrementAndGet();
     }
-
 }
