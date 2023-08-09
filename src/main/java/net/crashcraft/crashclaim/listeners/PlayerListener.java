@@ -46,6 +46,7 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerPickupArrowEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.vehicle.VehicleDamageEvent;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
 import java.util.UUID;
@@ -93,8 +94,9 @@ public class PlayerListener implements Listener {
         if (GlobalConfig.disabled_worlds.contains(e.getEntity().getWorld().getUID())){
             return;
         }
-
         if (e.getEntity().getShooter() instanceof Player player && !helper.hasPermission(player.getUniqueId(), player.getLocation(), PermissionRoute.ENTITIES)){
+            // Allow grapple hooks to bypass protections
+            if (isGrappleHook(player.getInventory().getItemInMainHand())) return;
             e.setCancelled(true);
             visuals.sendAlert(player, Localization.ALERT__NO_PERMISSIONS__ENTITIES.getMessage(player));
         }
@@ -681,5 +683,11 @@ public class PlayerListener implements Listener {
                 visuals.sendAlert(e.getPlayer(), Localization.ALERT__NO_PERMISSIONS__BUILD.getMessage(e.getPlayer()));
             }
         }
+    }
+
+    private boolean isGrappleHook(ItemStack itemStack) {
+        if (itemStack == null) return false;
+        if (!itemStack.hasItemMeta()) return false;
+        return itemStack.getType().equals(Material.FISHING_ROD) && itemStack.getItemMeta().getCustomModelData() == 1;
     }
 }
