@@ -62,7 +62,7 @@ public class CrashClaimExpansion extends PlaceholderExpansion {
                     Claim claim = crashClaim.getDataManager().getClaim(player.getLocation());
 
                     if (claim == null){
-                        return "";
+                        return "N/A";
                     }
 
                     return Bukkit.getOfflinePlayer(claim.getOwner()).getName();
