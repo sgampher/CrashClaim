@@ -1,6 +1,7 @@
 package net.crashcraft.crashclaim.listeners;
 
 import com.destroystokyo.paper.event.entity.ThrownEggHatchEvent;
+import io.papermc.paper.event.player.PlayerOpenSignEvent;
 import net.crashcraft.crashclaim.data.ClaimDataManager;
 import net.crashcraft.crashclaim.localization.Localization;
 import net.crashcraft.crashclaim.permissions.PermissionHelper;
@@ -35,6 +36,15 @@ public class PaperListener implements Listener {
             if (!helper.hasPermission(e.getEgg().getLocation(), PermissionRoute.ENTITIES)){
                 e.setHatching(false);
             }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerSignOpen(PlayerOpenSignEvent event) {
+        Player player = event.getPlayer();
+        if (!helper.hasPermission(player.getUniqueId(), event.getSign().getLocation(), PermissionRoute.INTERACTIONS)){
+            event.setCancelled(true);
+            visuals.sendAlert(player, Localization.ALERT__NO_PERMISSIONS__INTERACTION.getMessage(player));
         }
     }
 }
