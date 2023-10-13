@@ -44,7 +44,7 @@ dependencies {
 
     // Other
     implementation("co.aikar:taskchain-bukkit:3.7.2")
-    implementation("net.wesjd:anvilgui:1.6.6-SNAPSHOT")
+    implementation("net.wesjd:anvilgui:1.9.0-SNAPSHOT")
     implementation("co.aikar:fastutil-base:3.0-SNAPSHOT")
     implementation("co.aikar:fastutil-longbase:3.0-SNAPSHOT")
     implementation("co.aikar:fastutil-longhashmap:3.0-SNAPSHOT")
