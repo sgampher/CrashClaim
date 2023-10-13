@@ -181,7 +181,7 @@ public class ClaimDataManager implements Listener {
             int difference = area - originalArea;
 
             if (difference > 0) {
-                int price = (int) Math.ceil(difference * GlobalConfig.money_per_block);
+                int price = (int) Math.ceil(difference * GlobalConfig.getCostOfBlock(resizer));
                 String priceString = Integer.toString(price);
                 //Check price with player
                 new ConfirmationMenu(resizer,

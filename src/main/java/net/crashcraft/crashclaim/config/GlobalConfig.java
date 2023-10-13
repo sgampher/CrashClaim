@@ -1,12 +1,15 @@
 package net.crashcraft.crashclaim.config;
 
 import net.crashcraft.crashclaim.visualize.api.VisualColor;
+import net.luckperms.api.LuckPerms;
+import net.luckperms.api.LuckPermsProvider;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.plugin.RegisteredServiceProvider;
 
 import java.util.*;
 
@@ -124,14 +127,45 @@ public class GlobalConfig extends BaseConfig{
         }
     }
 
-    public static double money_per_block;
+    // public static double money_per_block;
+    private static SortedMap<String, Double> money_per_block_group;
     public static ArrayList<UUID> disabled_worlds;
     public static String forcedVersionString;
     public static boolean blockPvPInsideClaims;
     public static boolean checkEntryExitWhileFlying;
 
+    public static double getCostOfBlock(UUID player) {
+        return getCostOfBlock(Objects.requireNonNull(Bukkit.getPlayer(player)));
+    }
+
+    public static double getCostOfBlock(Player player) {
+        if (player.hasPermission("crashclaim.free")) {
+            return 0;
+        }
+        // Find which group matches sorted map key (group name)
+        ArrayList<String> keySet = new ArrayList<>(money_per_block_group.keySet());
+        Collections.reverse(keySet);
+        for (String group : keySet) {
+            if (player.hasPermission("group." + group)) {
+                return money_per_block_group.get(group);
+            }
+        }
+        // If no group matches, return default value
+        return money_per_block_group.get("default");
+    }
+
     private static void miscValues(){
-        money_per_block = getDouble("money-per-block", 0.01);
+        // money_per_block = getDouble("money-per-block", 0.01);
+        money_per_block_group = new TreeMap<>();
+        ConfigurationSection section = config.getConfigurationSection("group-cost");
+        if (section != null){
+            for (String key : section.getKeys(false)){
+                money_per_block_group.put(key, section.getDouble(key + ".money-per-block"));
+            }
+        }
+        else {
+            money_per_block_group.put("default", 0.5);
+        }
         disabled_worlds = new ArrayList<>();
         for (String s : getStringList("disabled-worlds", Collections.emptyList())){
             World world = Bukkit.getWorld(s);

@@ -6,3 +6,7 @@ depend: [ProtocolLib]
 softdepend: [CrashPayment, Vault, GriefPrevention, WorldGuard, PlaceholderAPI, Multiverse-Core, Hyperverse, LuckPerms]
 main: net.crashcraft.crashclaim.CrashClaim
 api-version: 1.16
+permissions:
+  crashclaim.free:
+    description: Player(s) won't have tokens deducted from their account.
+    default: false

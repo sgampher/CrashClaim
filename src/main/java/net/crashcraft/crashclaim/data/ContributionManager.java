@@ -29,25 +29,20 @@ public class ContributionManager {
         if (difference > 0){
             claim.addContribution(player, difference);  //add to contribution
         } else {
-            int value = (int) Math.floor(Math.floor(Math.abs(difference) * GlobalConfig.money_per_block) / claim.getContribution().size());
 
-            refund(claim, value);
+            refund(claim, Math.abs(difference));
         }
     }
 
     public static void refundContributors(Claim claim){
         int area = getArea(claim.getMinX(), claim.getMinZ(), claim.getMaxX(), claim.getMaxZ());
-        int value = (int) Math.floor(Math.floor(area * GlobalConfig.money_per_block) / claim.getContribution().size());
 
-        refund(claim, value);
+        refund(claim, area);
     }
 
-    private static void refund(Claim claim, int value) {
-        if (value == 0){
-            return;
-        }
-
+    private static void refund(Claim claim, int multiplier) {
         for (Map.Entry<UUID, Integer> entry : claim.getContribution().entrySet()){
+            int value =  (int) Math.floor(Math.floor(multiplier *  GlobalConfig.getCostOfBlock(entry.getKey())) / claim.getContribution().size());
             CrashClaim.getPlugin().getPayment().makeTransaction(entry.getKey(), TransactionType.DEPOSIT, "Claim Refund", value, (transaction) -> {
                 OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(transaction.getOwner());
                 if (offlinePlayer.isOnline()){

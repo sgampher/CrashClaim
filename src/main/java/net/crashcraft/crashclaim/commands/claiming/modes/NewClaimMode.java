@@ -78,7 +78,7 @@ public class NewClaimMode implements ClaimMode {
         int area = ContributionManager.getArea(min.getBlockX(), min.getBlockZ(), max.getBlockX(), max.getBlockZ());
 
         int price = (GlobalConfig.bypassModeBypassesMoney && PermissionHelper.getPermissionHelper().getBypassManager().isBypass(player.getUniqueId())) ?
-                0 : (int) Math.ceil(area * GlobalConfig.money_per_block);
+                0 : (int) Math.ceil(area * GlobalConfig.getCostOfBlock(player));
         String priceString = Integer.toString(price);
 
         if (price > 0){
