@@ -540,6 +540,29 @@ public class SQLiteDataProvider implements DataProvider {
         return null;
     }
 
+    @Override
+    public void updateLastLoginTime(UUID uuid, int lastLogin) {
+        try {
+            DB.executeUpdate("UPDATE players SET lastLogin = ? WHERE uuid = ?", lastLogin, uuid.toString());
+        } catch (SQLException e){
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public int getLastLoginTime(UUID uuid){
+        try {
+            List<DbRow> rows = DB.getResults("SELECT lastLogin FROM players WHERE uuid = ?", uuid.toString());
+            if (rows.isEmpty() || rows.get(0).get("lastLogin") == null){
+                return 0;
+            }
+            return rows.get(0).getInt("lastLogin");
+        } catch (SQLException e){
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
     private GlobalPermissionSet getGlobalPermissionSet(int data_id) throws SQLException{
         DbRow globalPermissionRow = DB.getFirstRow("SELECT build, interactions, entities, explosions, entityGrief, teleportation, viewSubClaims, pistons, fluids, defaultContainer FROM permission_set " +
                 "WHERE data_id = ? AND players_id = -1", data_id);

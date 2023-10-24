@@ -726,4 +726,8 @@ public class ClaimDataManager implements Listener {
     public IntCache<Claim> getClaimCache() {
         return claimLookup;
     }
+
+    public DataProvider getProvider() {
+        return provider;
+    }
 }

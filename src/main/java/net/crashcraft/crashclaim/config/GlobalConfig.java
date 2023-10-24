@@ -28,13 +28,13 @@ public class GlobalConfig extends BaseConfig{
 
     public static HashMap<String, GroupSettings> groupSettings;
 
-    private static void loadGroups(){
+    private static void loadGroups() {
         groupSettings = new HashMap<>();
 
         final String baseKey = "group-settings";
         ConfigurationSection section = config.getConfigurationSection(baseKey);
         Set<String> keys;
-        if (section == null){
+        if (section == null) {
             keys = new HashSet<>();
         } else {
             keys = section.getKeys(false);
@@ -42,7 +42,7 @@ public class GlobalConfig extends BaseConfig{
 
         keys.add("default"); // Always need a default group.
 
-        for (String groupName : keys){
+        for (String groupName : keys) {
             groupSettings.put(groupName, new GroupSettings(
                     getInt(baseKey + "." + groupName + ".max-claims", -1)
             ));
@@ -134,6 +134,9 @@ public class GlobalConfig extends BaseConfig{
     public static boolean blockPvPInsideClaims;
     public static boolean checkEntryExitWhileFlying;
 
+    public static double numberOfDaysTillExpiration;
+    public static String expiredMessage;
+
     public static double getCostOfBlock(UUID player) {
         return getCostOfBlock(Objects.requireNonNull(Bukkit.getPlayer(player)));
     }
@@ -180,6 +183,9 @@ public class GlobalConfig extends BaseConfig{
         forcedVersionString = config.getString("use-this-version-instead");
         blockPvPInsideClaims = getBoolean("block-pvp-inside-claims", false);
         checkEntryExitWhileFlying = config.getBoolean("check-entry-and-exit-while-flying", false);
+
+        numberOfDaysTillExpiration = getDouble("expired-claims.number-of-days", 30);
+        expiredMessage = getString("expired-claims.message", "Your claim has expired due to inactivity at <COORDS> [Click to Teleport]");
     }
 
     public static boolean bypassModeBypassesMoney;

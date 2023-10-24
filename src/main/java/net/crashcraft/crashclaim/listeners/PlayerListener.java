@@ -10,9 +10,9 @@ import net.crashcraft.crashclaim.permissions.PermissionHelper;
 import net.crashcraft.crashclaim.permissions.PermissionRoute;
 import net.crashcraft.crashclaim.permissions.PermissionSetup;
 import net.crashcraft.crashclaim.visualize.VisualizationManager;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Container;
@@ -101,11 +101,34 @@ public class PlayerListener implements Listener {
             visuals.sendAlert(player, Localization.ALERT__NO_PERMISSIONS__ENTITIES.getMessage(player));
         }
     }
-
+    
+    public void processDeletedClaim(Claim claim) {
+        Player owner = Bukkit.getPlayer(claim.getOwner());
+        if (owner == null || owner.hasPermission("crashclaim.bypass.expire")) {  // This should theoretically never happen, however, early return is here to guard against NPE's just in case.
+            return;
+        }
+        String message = GlobalConfig.expiredMessage.replace("<COORDS>", claim.getCenter());
+        TextComponent component = new TextComponent(TextComponent.fromLegacyText(ChatColor.translateAlternateColorCodes('&', message)));
+        component.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/minecraft:tp " + owner.getName() + " " + claim.getCenterX() + "~" + claim.getCenterZ()));
+        if (owner != null) {
+            owner.spigot().sendMessage(component);
+        }
+        manager.deleteClaim(claim);
+    }
+    
     @EventHandler (priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPlayerJoinEvent(PlayerJoinEvent e){
         if (e.getPlayer().hasPermission("crashclaim.admin.bypassonjoin")){
             helper.getBypassManager().addBypass(e.getPlayer().getUniqueId()); // Enable on join
+        }
+        Player player = e.getPlayer();
+        int time = manager.getProvider().getLastLoginTime(player.getUniqueId());
+        manager.getProvider().updateLastLoginTime(player.getUniqueId(), (int) (System.currentTimeMillis() / 1000L));
+        if (time != 0) {
+            int days = (int) ((System.currentTimeMillis() / 1000L - time) / 86400L);
+            if (days >= GlobalConfig.numberOfDaysTillExpiration) {
+                manager.getOwnedClaims(player.getUniqueId()).forEach(this::processDeletedClaim);
+            }
         }
     }
 
@@ -690,4 +713,5 @@ public class PlayerListener implements Listener {
         if (!itemStack.hasItemMeta()) return false;
         return itemStack.getType().equals(Material.FISHING_ROD) && itemStack.getItemMeta().getCustomModelData() == 1;
     }
+    
 }

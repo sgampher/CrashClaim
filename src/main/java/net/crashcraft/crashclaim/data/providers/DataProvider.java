@@ -40,4 +40,14 @@ public interface DataProvider extends Listener {
      * @return a list of owned claims
      */
     Set<Integer> getOwnedParentClaims(UUID uuid);
+
+    /**
+     * Update the last login time
+     */
+    void updateLastLoginTime(UUID uuid, int lastLogin);
+
+    /**
+     * @return last login time
+     */
+    int getLastLoginTime(UUID uuid);
 }

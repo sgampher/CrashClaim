@@ -65,6 +65,30 @@ public abstract class BaseClaim {
         return maxCornerZ;
     }
 
+    /**
+     * Return Centre (x, z) of the claim
+     * @return Centre (x, z) of the claim
+     */
+    public String getCenter() {
+        return (minCornerX + maxCornerX) / 2 + ", " + (minCornerZ + maxCornerZ) / 2;
+    }
+
+    /**
+     * Return centre x
+     * @return centre x
+     */
+    public int getCenterX() {
+        return (minCornerX + maxCornerX) / 2;
+    }
+
+    /**
+     * Return centre z
+     * @return centre z
+     */
+    public int getCenterZ() {
+        return (minCornerZ + maxCornerZ) / 2;
+    }
+
     public UUID getWorld() {
         return world;
     }
