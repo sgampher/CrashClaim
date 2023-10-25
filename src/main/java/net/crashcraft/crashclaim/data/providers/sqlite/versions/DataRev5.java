@@ -17,6 +17,7 @@ public class DataRev5 implements DataVersion {
 
     @Override
     public void executeUpgrade(int fromRevision) throws SQLException {
+        DB.executeUpdate("PRAGMA foreign_keys = OFF"); // Turn foreign keys off
         DB.executeUpdate("CREATE TABLE players_backup (\n" +
                 "\t\"id\"\tINTEGER,\n" +
                 "\t\"uuid\"\tTEXT NOT NULL,\n" +
@@ -49,5 +50,6 @@ public class DataRev5 implements DataVersion {
             DB.executeInsert("INSERT INTO players (id, uuid, username) VALUES (?, ?, ?)", row.getInt("id"), row.getString("uuid"), row.getString("username"));
             seenUUIDs.add(uuid);
         }
+        DB.executeUpdate("PRAGMA foreign_keys = ON");  // Undo
     }
 }
