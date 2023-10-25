@@ -65,6 +65,10 @@ public abstract class BaseClaim {
         return maxCornerZ;
     }
 
+    public int getAreaBlocks() {
+        return (maxCornerX - minCornerX) * (maxCornerZ - minCornerZ);
+    }
+
     /**
      * Return Centre (x, z) of the claim
      * @return Centre (x, z) of the claim

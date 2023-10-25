@@ -137,6 +137,8 @@ public class GlobalConfig extends BaseConfig{
     public static double numberOfDaysTillExpiration;
     public static String expiredMessage;
 
+    public static int maxClaimBlocks;
+
     public static double getCostOfBlock(UUID player) {
         return getCostOfBlock(Objects.requireNonNull(Bukkit.getPlayer(player)));
     }
@@ -186,6 +188,7 @@ public class GlobalConfig extends BaseConfig{
 
         numberOfDaysTillExpiration = getDouble("expired-claims.number-of-days", 30);
         expiredMessage = getString("expired-claims.message", "Your claim has expired due to inactivity at <COORDS> [Click to Teleport]");
+        maxClaimBlocks = getInt("max-claim-blocks", -1);
     }
 
     public static boolean bypassModeBypassesMoney;

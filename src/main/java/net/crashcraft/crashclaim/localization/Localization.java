@@ -181,6 +181,8 @@ public enum Localization {
     CLAIM__ENABLED("<green>Claim mode <bold>enabled!"),
     CLAIM__DISABLED("<red>Claim mode <bold>disabled!"),
 
+    CLAIM__TOO_BIG("<red>That claim is too big. <bold>Must be smaller than <blocks>!"),
+
     SUBCLAIM__ENABLED("<green>Sub-Claiming mode <bold>enabled!"),
     SUBCLAIM__DISABLED("<red>Sub-Claiming mode <bold>disabled!"),
     SUBCLAIM__NO_CLAIM("<red>You need to be standing in a claim to enable sub-claiming mode."),

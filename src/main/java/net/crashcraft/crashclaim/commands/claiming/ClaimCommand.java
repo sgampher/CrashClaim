@@ -182,6 +182,11 @@ public class ClaimCommand extends BaseCommand implements Listener {
                         });
                         chain.execute();
                     } else {
+                        if (claim.getAreaBlocks() > GlobalConfig.maxClaimBlocks && GlobalConfig.maxClaimBlocks != -1) {
+                            player.sendMessage(Localization.CLAIM__TOO_BIG.getMessage(player, "blocks", Integer.toString(GlobalConfig.maxClaimBlocks)));
+                            forceCleanup(uuid, true);
+                            return;
+                        }
                         stateMap.put(uuid, new ResizeClaimMode(this, player, claim, location));
                     }
                 }

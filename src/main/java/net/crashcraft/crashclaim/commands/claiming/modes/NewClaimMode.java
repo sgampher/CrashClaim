@@ -22,6 +22,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.UUID;
 
 public class NewClaimMode implements ClaimMode {
@@ -59,6 +60,15 @@ public class NewClaimMode implements ClaimMode {
 
         if (!CrashClaim.getPlugin().getPluginSupport().canClaim(min, max)){
             player.spigot().sendMessage(Localization.NEW_CLAIM__OTHER_ERROR.getMessage(player));
+            return false;
+        }
+        // Fetch a users claims
+        int blocks = CrashClaim.getPlugin().getDataManager().getOwnedClaims(player.getUniqueId()).stream().map(Claim::getAreaBlocks).reduce(0, Integer::sum);
+        blocks += (max.getBlockX() - min.getBlockX()) * (max.getBlockZ() - min.getBlockZ());
+        // Check max blocks
+        if (GlobalConfig.maxClaimBlocks > -1  && (blocks > GlobalConfig.maxClaimBlocks)){
+            player.spigot().sendMessage(Localization.CLAIM__TOO_BIG.getMessage(player,
+                    "blocks", Integer.toString(GlobalConfig.maxClaimBlocks)));
             return false;
         }
 
