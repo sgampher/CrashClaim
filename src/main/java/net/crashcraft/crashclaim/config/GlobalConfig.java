@@ -3,6 +3,8 @@ package net.crashcraft.crashclaim.config;
 import net.crashcraft.crashclaim.visualize.api.VisualColor;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
+import net.luckperms.api.model.group.Group;
+import net.luckperms.api.model.user.User;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -147,16 +149,21 @@ public class GlobalConfig extends BaseConfig{
         if (player.hasPermission("crashclaim.free")) {
             return 0;
         }
+
+        LuckPerms luckPermsProvider = LuckPermsProvider.get();
+
         // Find which group matches sorted map key (group name)
         ArrayList<String> keySet = new ArrayList<>(money_per_block_group.keySet());
         Collections.reverse(keySet);
-        for (String group : keySet) {
-            if (player.hasPermission("group." + group)) {
-                return money_per_block_group.get(group);
-            }
+        User user = luckPermsProvider.getUserManager().getUser(player.getUniqueId());
+        if (user == null) {
+            return money_per_block_group.get("default");
         }
-        // If no group matches, return default value
-        return money_per_block_group.get("default");
+        Collection<Group> groups = user.getInheritedGroups(user.getQueryOptions());
+        // Return the group with the highest weight that's in keySet
+        return money_per_block_group.getOrDefault(groups.stream().filter(group -> keySet.contains(group.getName())).reduce(
+                (acc, val) -> acc.getWeight().getAsInt() > val.getWeight().getAsInt() ? acc : val
+        ).get().getName(), money_per_block_group.get("default"));
     }
 
     private static void miscValues(){
