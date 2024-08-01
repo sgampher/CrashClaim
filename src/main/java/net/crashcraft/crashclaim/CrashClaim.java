@@ -3,40 +3,45 @@ package net.crashcraft.crashclaim;
 import co.aikar.taskchain.BukkitTaskChainFactory;
 import co.aikar.taskchain.TaskChain;
 import co.aikar.taskchain.TaskChainFactory;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.ProtocolManager;
-import dev.whip.crashutils.CrashUtils;
-import dev.whip.crashutils.menusystem.GUI;
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.event.PacketListenerPriority;
+import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import io.papermc.lib.PaperLib;
 import net.crashcraft.crashclaim.api.CrashClaimAPI;
 import net.crashcraft.crashclaim.commands.CommandManager;
-import net.crashcraft.crashclaim.compatability.CompatabilityManager;
-import net.crashcraft.crashclaim.compatability.CompatabilityWrapper;
+import net.crashcraft.crashclaim.commands.claiming.ClaimCommand;
 import net.crashcraft.crashclaim.config.ConfigManager;
 import net.crashcraft.crashclaim.config.GlobalConfig;
+import net.crashcraft.crashclaim.listeners.PacketEventsListener;
+import net.crashcraft.crashclaim.payment.PaymentProcessor;
+import net.crashcraft.crashclaim.payment.PaymentProvider;
+import net.crashcraft.crashclaim.payment.ProcessorManager;
+import net.crashcraft.crashclaim.payment.ProviderInitializationException;
+import net.crashcraft.crashclaim.crashutils.CrashUtils;
+import net.crashcraft.crashclaim.crashutils.menusystem.GUI;
 import net.crashcraft.crashclaim.data.ClaimDataManager;
 import net.crashcraft.crashclaim.data.MaterialName;
-import net.crashcraft.crashclaim.listeners.PaperListener;
 import net.crashcraft.crashclaim.listeners.PlayerListener;
 import net.crashcraft.crashclaim.listeners.WorldListener;
 import net.crashcraft.crashclaim.localization.LocalizationLoader;
 import net.crashcraft.crashclaim.migration.MigrationManager;
+import net.crashcraft.crashclaim.packet.PacketHandler;
 import net.crashcraft.crashclaim.permissions.PermissionHelper;
 import net.crashcraft.crashclaim.pluginsupport.PluginSupport;
 import net.crashcraft.crashclaim.pluginsupport.PluginSupportManager;
-import net.crashcraft.crashclaim.update.UpdateManager;
 import net.crashcraft.crashclaim.visualize.VisualizationManager;
-import net.crashcraft.crashpayment.CrashPayment;
-import net.crashcraft.crashpayment.payment.PaymentProcessor;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bstats.bukkit.Metrics;
 import org.bstats.charts.SimplePie;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 
 public class CrashClaim extends JavaPlugin {
     private static CrashClaim plugin;
@@ -45,40 +50,42 @@ public class CrashClaim extends JavaPlugin {
 
     private CrashClaimAPI api;
 
-    private CompatabilityWrapper wrapper;
+    private PacketHandler handler;
     private PluginSupportManager pluginSupport;
 
     private ClaimDataManager manager;
     private VisualizationManager visualizationManager;
-    private ProtocolManager protocolManager;
     private CrashUtils crashUtils;
     private MaterialName materialName;
     private PaymentProcessor payment;
-    private CrashPayment paymentPlugin;
     private CommandManager commandManager;
     private MigrationManager migrationManager;
     private BukkitAudiences adventure;
-    private UpdateManager updateManager;
 
     @Override
     public void onLoad() {
         plugin = this;
 
-        this.protocolManager = ProtocolLibrary.getProtocolManager();
-        this.paymentPlugin = (CrashPayment) Bukkit.getPluginManager().getPlugin("CrashPayment");
+        PacketEvents.setAPI(SpigotPacketEventsBuilder.build(this));
+        //Are all listeners read only?
+        PacketEvents.getAPI().getSettings().reEncodeByDefault(false)
+                .checkForUpdates(false)
+                .bStats(true);
+        PacketEvents.getAPI().load();
 
-        if (paymentPlugin == null){
-            disablePlugin("[Payment] CrashPayment plugin not found, disabling plugin, download and install it here, https://www.spigotmc.org/resources/crashpayment.94069/");
-        }
 
         this.crashUtils = new CrashUtils(this);
         this.pluginSupport = new PluginSupportManager(this); // Enable plugin support
-
-        pluginSupport.onLoad();
+        this.pluginSupport.onLoad(); // Load all plugin support
     }
 
     @Override
     public void onEnable() {
+        List<String> supportedVersions = Arrays.asList("1.20.4", "1.20.5", "1.20.6", "1.21"); //order from min to max
+        if (!isServerSupported(supportedVersions)) {
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
         Bukkit.getPluginManager().registerEvents(pluginSupport, this);
 
         taskChainFactory = BukkitTaskChainFactory.create(this);
@@ -86,7 +93,7 @@ public class CrashClaim extends JavaPlugin {
 
         loadConfigs();
 
-        wrapper = new CompatabilityManager(protocolManager).getWrapper(); // Find and fetch version wrapper
+        handler = new PacketHandler(); // Find and fetch version wrapper
 
         getLogger().info("Loading language file");
         LocalizationLoader.initialize(); // Init and reload localization
@@ -95,7 +102,7 @@ public class CrashClaim extends JavaPlugin {
         crashUtils.setupMenuSubSystem();
         crashUtils.setupTextureCache();
 
-        payment = paymentPlugin.setupPaymentProvider(this, GlobalConfig.paymentProvider).getProcessor();
+        payment = setupPaymentProvider(this, GlobalConfig.paymentProvider).getProcessor();
 
         this.visualizationManager = new VisualizationManager(this);
         this.manager = new ClaimDataManager(this);
@@ -106,32 +113,25 @@ public class CrashClaim extends JavaPlugin {
         new PermissionHelper(manager);
 
         this.migrationManager = new MigrationManager(this);
+        commandManager = new CommandManager(this);
 
         Bukkit.getPluginManager().registerEvents(new WorldListener(manager, visualizationManager), this);
         Bukkit.getPluginManager().registerEvents(new PlayerListener(manager, visualizationManager), this);
 
-        if (PaperLib.isPaper()){
-            getLogger().info("Using extra protections provided by the paper api");
-            Bukkit.getPluginManager().registerEvents(new PaperListener(manager, visualizationManager), this);
-        } else {
-            getLogger().info("Looks like your not running paper, some protections will be disabled");
-            PaperLib.suggestPaper(this);
-        }
+        PacketEvents.getAPI().getEventManager().registerListener(new PacketEventsListener(plugin, new ClaimCommand(getDataManager(), getVisualizationManager())),
+                PacketListenerPriority.LOW);
+        PacketEvents.getAPI().init();
 
-        commandManager = new CommandManager(this);
+        pluginSupport.onEnable();
+        LocalizationLoader.register(); // Register PlaceHolders
 
-        if (GlobalConfig.useStatistics){
+        Bukkit.getServicesManager().register(PaymentProvider.class, payment.getProvider(), plugin, ServicePriority.Normal);
+
+        if (GlobalConfig.useStatistics) {
             getLogger().info("Enabling Statistics");
             Metrics metrics = new Metrics(this, 12015);
             metrics.addCustomChart(new SimplePie("used_language", () -> GlobalConfig.locale));
         }
-
-        if (GlobalConfig.checkUpdates){
-            updateManager = new UpdateManager(this);
-        }
-
-        pluginSupport.onEnable();
-        LocalizationLoader.register(); // Register PlaceHolders
 
         this.api = new CrashClaimAPI(this); // Enable api last as it might require some instances before to function properly.
     }
@@ -147,12 +147,14 @@ public class CrashClaim extends JavaPlugin {
 
         //Unregister all user facing things
         HandlerList.unregisterAll(this);
-        commandManager.getCommandManager().unregisterCommands();
+        if (commandManager != null) commandManager.getCommandManager().unregisterCommands();
         for (Player player : Bukkit.getOnlinePlayers()){
             if (player.getOpenInventory().getTopInventory().getHolder() instanceof GUI){
                 player.closeInventory();
             }
         }
+
+        pluginSupport.onDisable();
 
         //Null all references just to be sure, manager will still hold them but this stops this class from being referenced for anything
         dataLoaded = false;
@@ -160,14 +162,23 @@ public class CrashClaim extends JavaPlugin {
         api = null;
         manager = null;
         visualizationManager = null;
-        protocolManager = null;
         crashUtils = null;
         materialName = null;
         payment = null;
-        paymentPlugin = null;
         commandManager = null;
         migrationManager = null;
         adventure = null;
+    }
+    public ProcessorManager setupPaymentProvider(JavaPlugin plugin){
+        return setupPaymentProvider(plugin, "");
+    }
+    public ProcessorManager setupPaymentProvider(JavaPlugin plugin, String providerOverride){
+        try {
+            return new ProcessorManager(plugin, providerOverride);
+        } catch (ProviderInitializationException e){
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public void loadConfigs(){
@@ -190,6 +201,40 @@ public class CrashClaim extends JavaPlugin {
             getLogger().severe("Could not load configuration properly. Stopping server");
             plugin.getServer().shutdown();
         }
+    }
+
+    private boolean isServerSupported(List<String> supportedVersions) {
+        if (!PaperLib.isPaper()) {
+            getLogger().severe("CrashClaim requires Paper to run.");
+            PaperLib.suggestPaper(this);
+            getServer().getPluginManager().disablePlugin(this);
+            return false;
+        }
+
+        String minecraftVersion = Bukkit.getMinecraftVersion();
+        int minecraftVersionInt = versionStringToInt(minecraftVersion);
+        int minSupportedVersionInt = versionStringToInt(supportedVersions.get(0));
+        int maxSupportedVersionInt = versionStringToInt(supportedVersions.get(supportedVersions.size() - 1));
+
+        if (minecraftVersionInt < minSupportedVersionInt) {
+            getLogger().severe("Your server's version is older than CrashClaim's minimum supported version, which is " + supportedVersions.get(0) +
+                    ". The plugin will not attempt loading. Your server is currently running version " + minecraftVersion + ".");
+            return false;
+        } else if (minecraftVersionInt > maxSupportedVersionInt) {
+            getLogger().warning("Your server's version is newer than CrashClaim's maximum supported version, which is " + supportedVersions.get(supportedVersions.size() - 1) +
+                    ". The plugin will still attempt to load, but issues may arise. " +
+                    "Please check if the plugin has newer versions available. Your server is currently running version " + minecraftVersion + ".");
+        }
+
+        return true;
+    }
+
+    private int versionStringToInt(String version) {
+        String[] parts = version.split("\\.");
+        int major = Integer.parseInt(parts[0]);
+        int minor = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+        int patch = parts.length > 2 ? Integer.parseInt(parts[2]) : 0;
+        return major * 10000 + minor * 100 + patch;
     }
 
     public void disablePlugin(String error){
@@ -237,6 +282,7 @@ public class CrashClaim extends JavaPlugin {
         return commandManager;
     }
 
+
     public MigrationManager getMigrationManager() {
         return migrationManager;
     }
@@ -245,19 +291,15 @@ public class CrashClaim extends JavaPlugin {
         return adventure;
     }
 
-    public CompatabilityWrapper getWrapper() {
-        return wrapper;
-    }
-
-    public ProtocolManager getProtocolManager() {
-        return protocolManager;
+    public PacketHandler getHandler() {
+        return handler;
     }
 
     public PluginSupport getPluginSupport(){
         return pluginSupport.getSupportDistributor();
     }
 
-    public UpdateManager getUpdateManager() {
-        return updateManager;
+    public PluginSupportManager getPluginSupportManager() {
+        return pluginSupport;
     }
 }

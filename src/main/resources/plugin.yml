@@ -2,8 +2,7 @@ name: CrashClaim
 version: ${version}
 description: A modern advanced user oriented claiming system
 author: Chasewhip
-depend: [ProtocolLib]
-softdepend: [CrashPayment, Vault, GriefPrevention, WorldGuard, PlaceholderAPI, Multiverse-Core, Hyperverse, LuckPerms]
+softdepend: [Vault, GriefPrevention, WorldGuard, PlaceholderAPI, Multiverse-Core, Hyperverse, LuckPerms, QuickShop-Hikari, DeluxeSellwands ]
 main: net.crashcraft.crashclaim.CrashClaim
 api-version: 1.16
 permissions:

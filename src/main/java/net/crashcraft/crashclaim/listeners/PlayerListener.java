@@ -1,5 +1,8 @@
 package net.crashcraft.crashclaim.listeners;
 
+import com.destroystokyo.paper.MaterialTags;
+import com.destroystokyo.paper.event.entity.ThrownEggHatchEvent;
+import net.crashcraft.crashclaim.CrashClaim;
 import net.crashcraft.crashclaim.claimobjects.BaseClaim;
 import net.crashcraft.crashclaim.claimobjects.Claim;
 import net.crashcraft.crashclaim.claimobjects.SubClaim;
@@ -10,9 +13,10 @@ import net.crashcraft.crashclaim.permissions.PermissionHelper;
 import net.crashcraft.crashclaim.permissions.PermissionRoute;
 import net.crashcraft.crashclaim.permissions.PermissionSetup;
 import net.crashcraft.crashclaim.visualize.VisualizationManager;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.TextComponent;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Container;
@@ -46,7 +50,7 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerPickupArrowEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.vehicle.VehicleDamageEvent;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.BlockInventoryHolder;
 
 import java.util.List;
 import java.util.UUID;
@@ -94,6 +98,11 @@ public class PlayerListener implements Listener {
         if (GlobalConfig.disabled_worlds.contains(e.getEntity().getWorld().getUID())){
             return;
         }
+
+        if (e.getEntity().getType().equals(EntityType.FIREWORK)) {
+            return;
+        }
+
         if (e.getEntity().getShooter() instanceof Player player && !helper.hasPermission(player.getUniqueId(), player.getLocation(), PermissionRoute.ENTITIES)){
             // Allow grapple hooks to bypass protections
             if (isGrappleHook(player.getInventory().getItemInMainHand())) return;
@@ -162,6 +171,10 @@ public class PlayerListener implements Listener {
             return;
         }
 
+        if (e.getAction().equals(Action.RIGHT_CLICK_AIR) && e.getItem() != null && e.getItem().getType().equals(Material.FIREWORK_ROCKET)){
+            return;
+        }
+
         if (e.getAction().equals(Action.RIGHT_CLICK_BLOCK) && e.getItem() != null && perms.getHeldItemInteraction().contains(e.getItem().getType())) {
             if (!helper.hasPermission(player.getUniqueId(), location, PermissionRoute.ENTITIES)){
                 e.setCancelled(true);
@@ -170,12 +183,27 @@ public class PlayerListener implements Listener {
             return;
         }
 
+        if (e.getItem() != null && MaterialTags.SPAWN_EGGS != null) {
+            Material itemMaterial = e.getItem().getType();
+            if (MaterialTags.SPAWN_EGGS.getValues().contains(itemMaterial)) {
+                if (!helper.hasPermission(player.getUniqueId(), location, PermissionRoute.ENTITIES)) {
+                    e.setCancelled(true);
+                    visuals.sendAlert(player, Localization.ALERT__NO_PERMISSIONS__ENTITIES.getMessage(player));
+                    return;
+                }
+            }
+        }
+
         if (!e.getClickedBlock().getType().isInteractable()
                         && !perms.getExtraInteractables().contains(e.getClickedBlock().getType())
                         || perms.getUntrackedBlocks().contains(e.getClickedBlock().getType()))
             return;
 
-        if (e.getClickedBlock().getState() instanceof Container){
+        if (e.getClickedBlock() != null && CrashClaim.getPlugin().getPluginSupport().canInteract(player, e.getClickedBlock().getLocation())) {
+            return;
+        }
+
+        if (e.getClickedBlock().getState() instanceof BlockInventoryHolder){
             if (helper.hasPermission(player.getUniqueId(), location, e.getClickedBlock().getType())){
                 return;
             }
@@ -456,7 +484,8 @@ public class PlayerListener implements Listener {
                 }
             }
         } else if (e.getDamager() instanceof Player player) {
-            if (e.getEntity().getType().equals(EntityType.ITEM_FRAME)){ // Special case move item frames into build category, less confusing
+            if (e.getEntity().getType().equals(EntityType.ITEM_FRAME)
+                    || e.getEntity().getType().equals(EntityType.GLOW_ITEM_FRAME)) { // Special case move item frames into build category, less confusing
                 if (!helper.hasPermission(player.getUniqueId(), e.getEntity().getLocation(), PermissionRoute.BUILD)){
                     e.setCancelled(true);
                     visuals.sendAlert(player, Localization.ALERT__NO_PERMISSIONS__BUILD.getMessage(player));
@@ -708,10 +737,21 @@ public class PlayerListener implements Listener {
         }
     }
 
-    private boolean isGrappleHook(ItemStack itemStack) {
-        if (itemStack == null) return false;
-        if (!itemStack.hasItemMeta()) return false;
-        return itemStack.getType().equals(Material.FISHING_ROD) && itemStack.getItemMeta().getCustomModelData() == 1;
+    @EventHandler (priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onThrownEggHatchEvent(ThrownEggHatchEvent e){
+        if (!e.isHatching()){
+            return;
+        }
+
+        if (e.getEgg().getShooter() instanceof Player player) {
+            if (!helper.hasPermission(player.getUniqueId(), e.getEgg().getLocation(), PermissionRoute.ENTITIES)){
+                e.setHatching(false);
+                visuals.sendAlert(player, Localization.ALERT__NO_PERMISSIONS__ENTITIES.getMessage(player));
+            }
+        } else {
+            if (!helper.hasPermission(e.getEgg().getLocation(), PermissionRoute.ENTITIES)){
+                e.setHatching(false);
+            }
+        }
     }
-    
 }

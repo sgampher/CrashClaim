@@ -6,8 +6,7 @@ import net.crashcraft.crashclaim.pluginsupport.PluginSupport;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.model.PermissionHolder;
-import net.luckperms.api.query.QueryOptions;
-import org.bukkit.Location;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
@@ -15,28 +14,33 @@ public class LuckPermsSupport implements PluginSupport {
     private LuckPerms luckPerms;
 
     @Override
-    public boolean isUnSupportedVersion(String version) {
+    public boolean isUnsupportedVersion(String version) {
         return false;
     }
 
     @Override
-    public void onLoad(Plugin plugin) {
+    public boolean canLoad() {
+        return Bukkit.getPluginManager().getPlugin(getPluginName()) != null;
+    }
+
+    @Override
+    public String getPluginName() {
+        return "LuckPerms";
+    }
+
+    @Override
+    public void load(Plugin plugin) {
 
     }
 
     @Override
-    public void onEnable(Plugin plugin) {
+    public void enable(Plugin plugin) {
         luckPerms = LuckPermsProvider.get();
     }
 
     @Override
     public void disable() {
         luckPerms = null;
-    }
-
-    @Override
-    public boolean canClaim(Location minLoc, Location maxLoc) {
-        return true;
     }
 
     @Override

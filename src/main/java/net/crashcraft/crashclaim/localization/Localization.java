@@ -13,7 +13,6 @@ import net.kyori.adventure.text.serializer.bungeecord.BungeeComponentSerializer;
 import net.kyori.adventure.text.serializer.craftbukkit.BukkitComponentSerializer;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.chat.ComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.enchantments.Enchantment;
@@ -37,7 +36,6 @@ public enum Localization {
     //Generic Localizations
     PVP_DISABLED_INSIDE_CLAIM("<red>PvP is disabled inside of claims!"),
     DISABLED_WORLD("<red>Claiming is disabled inside this world."),
-    UPDATE_AVAILABLE("<yellow>An updated <bold>CrashClaim <version></bold> is now available to download on SpigotMC!\n<gold>Download now at https://whips.dev/crashclaim"),
     MAX_CLAIMS_REACHED("<red>You have claimed the maximum amount of claims possible."),
 
     BYPASS__ENABLED("<green>Enabled claim bypass. You are now bypassing permissions"),
